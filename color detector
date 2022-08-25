@@ -1,0 +1,104 @@
+import cv2 as cv
+import numpy as np
+import serial
+
+cap = cv.VideoCapture(0)
+
+# giving the threshold of three color
+color_dic = {'lower_blue': np.array([110, 50, 50]), 'upper_blue': np.array([130, 255, 255]),
+             'lower_green': np.array([80, 50, 50]), 'upper_green': np.array([100, 255, 255]),
+             'lower_red': np.array([0, 50, 50]), 'upper_red': np.array([10, 255, 255])
+             }
+
+# initialize the parameter
+portx = "COM1"
+bps = 115200
+delay = 10
+
+# inputted string determinate the color we will detect
+color = input("detecting color is: ")
+
+if cap.isOpened() == 0:
+    print("Can't open the camera!")
+    exit()
+
+while True:
+    _, image = cap.read()
+    img = cv.flip(image, 1)  # flip horizontally
+    imgHSV = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+    imgHSV_blur = cv.GaussianBlur(imgHSV, (5, 5), 0)
+    kernel = cv.getStructuringElement(cv.MORPH_CROSS, (5, 5))  # rectangle kernel 3by3
+    imgHSV_blur_erodo = cv.erode(imgHSV_blur, kernel, iterations=3)
+
+    if color == "blue":
+        img_blue = cv.inRange(imgHSV_blur_erodo, color_dic['lower_blue'], color_dic['upper_blue'])
+        cv.imshow('blue', img_blue)  # just for test
+        contours = cv.findContours(img_blue, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)[-2]
+        maxArea = max(contours, key=cv.contourArea)
+        minRect = cv.minAreaRect(maxArea)
+        pointLoc = cv.boxPoints(minRect)  # the location of max area's min rectangle
+        pointX = str(int((pointLoc[0][0] + pointLoc[2][0]) / 2))
+        pointY = str(int((pointLoc[0][1] + pointLoc[2][1]) / 2))
+        # print("printX = " + pointX + " " "printY = " + pointY)  # just for test
+
+        try:
+            ser = serial.Serial(portx, bps, timeout=delay)
+            ser.write(("pointX= " + pointX + ' ' + "pointY= " + pointY).encode())
+            print("发送成功！")
+            ser.close()
+
+        except Exception as e:
+            print("无法发送讯息", e)
+
+        cv.drawContours(img, [np.int0(pointLoc)], -1, (0, 255, 0), 3)
+        cv.imshow("resB", img)
+
+    if color == "green":
+        img_green = cv.inRange(imgHSV_blur_erodo, color_dic['lower_green'], color_dic['upper_green'])
+        cv.imshow('result', img_green)  # just for test
+        contours = cv.findContours(img_blue, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)[-2]
+        maxArea = max(contours, key=cv.contourArea)
+        minRect = cv.minAreaRect(maxArea)
+        pointLoc = cv.boxPoints(minRect)  # the location of max area's min rectangle
+        # print(pointLoc)  # just for test
+
+        pointX = str(int((pointLoc[0][0] + pointLoc[2][0]) / 2))
+        pointY = str(int((pointLoc[0][1] + pointLoc[2][1]) / 2))
+        # print("printX = " + pointX + " " "printY = " + pointY)  # just for test
+        try:
+            ser = serial.Serial(portx, bps, timeout=delay)
+            ser.write(("pointX= " + pointX + ' ' + "pointY= " + pointY).encode())
+            print("发送成功！")
+            ser.close()
+
+        except Exception as e:
+            print("无法发送讯息", e)
+
+        cv.drawContours(img, [np.int0(pointLoc)], -1, (0, 255, 0), 3)
+        cv.imshow("resG", img)
+    if color == "red":
+        contours = cv.findContours(img_blue, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)[-2]
+        maxArea = max(contours, key=cv.contourArea)
+        minRect = cv.minAreaRect(maxArea)
+        pointLoc = cv.boxPoints(minRect)  # the location of max area's min rectangle
+        # print(pointLoc)  # just for test
+
+        pointX = str(int((pointLoc[0][0] + pointLoc[2][0]) / 2))
+        pointY = str(int((pointLoc[0][1] + pointLoc[2][1]) / 2))
+        # print("printX = " + pointX + " " "printY = " + pointY)  # just for test
+        try:
+            ser = serial.Serial(portx, bps, timeout=delay)
+            ser.write(("pointX= " + pointX + ' ' + "pointY= " + pointY).encode())
+            print("发送成功！")
+            ser.close()
+
+        except Exception as e:
+            print("无法发送讯息", e)
+
+        cv.drawContours(img, [np.int0(pointLoc)], -1, (0, 255, 0), 3)
+        cv.imshow("resR", img)
+
+    if cv.waitKey(5) == ord('q'):  # click "q" to exit
+        break
+
+cv.destroyAllWindows()
